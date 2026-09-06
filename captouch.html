@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>電容式觸控互動教材：自容 vs 互容</title>
+<style>
+:root{--text:#2C2C2B;--sub:#7D7A75;--bg:#fff;--soft:#F9F8F7;--soft2:#F0EFED;--border:#E6E5E3;--blue:#2783DE;--blue-s:#E5F2FC;--green:#46A171;--green-s:#E8F1EC;--orange:#D5803B;--orange-s:#FBEBDE;--red:#E56458;--red-s:#FCE9E7;--wire:#2C2C2B}
+@media (prefers-color-scheme: dark){:root{--text:#fff;--sub:rgba(255,255,255,.65);--bg:#191919;--soft:#202020;--soft2:#383836;--border:rgba(255,255,255,.2);--blue:#5E9FE8;--blue-s:rgba(94,159,232,.14);--green:#72BC8F;--green-s:rgba(114,188,143,.14);--orange:#DE9255;--orange-s:rgba(222,146,85,.14);--red:#E97366;--red-s:rgba(233,115,102,.14);--wire:#fff}}
+*{box-sizing:border-box}
+body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif;color:var(--text);background:var(--bg);font-size:15px;line-height:1.5}
+.wrap{max-width:960px;margin:0 auto;padding:16px}
+header{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:12px}
+h1{font-size:17px;margin:0;font-weight:600}
+.tabs{display:flex;gap:4px;background:var(--soft2);padding:4px;border-radius:8px}
+.tab{border:0;background:transparent;color:var(--sub);padding:8px 14px;border-radius:6px;font:inherit;font-size:14px;cursor:pointer;min-height:36px}
+.tab[aria-selected=true]{background:var(--bg);color:var(--text);box-shadow:0 1px 2px rgba(0,0,0,.06)}
+.tab:focus-visible,button:focus-visible,input:focus-visible,.node:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+.panel{display:none}.panel.active{display:block}
+.grid{display:grid;grid-template-columns:1.25fr 1fr;gap:16px}
+@media (max-width:720px){.grid{grid-template-columns:1fr}}
+.card{border:1px solid var(--border);border-radius:8px;padding:16px;background:var(--soft)}
+.card h2{font-size:15px;margin:0 0 8px;font-weight:600}
+.seg{display:inline-flex;border:1px solid var(--border);border-radius:8px;overflow:hidden}
+.seg button{border:0;background:var(--bg);color:var(--sub);padding:8px 14px;font:inherit;font-size:14px;cursor:pointer;min-height:40px}
+.seg button[aria-pressed=true]{background:var(--blue);color:#fff}
+svg{width:100%;height:auto;display:block}
+svg[hidden]{display:none}
+.muted{color:var(--sub);font-size:13px}
+ul{margin:6px 0 0;padding-left:18px}li{margin:2px 0;font-size:14px}
+.tag{display:inline-block;font-size:12px;padding:2px 8px;border-radius:4px;background:var(--blue-s);color:var(--blue);font-weight:600}
+.tag.up{background:var(--green-s);color:var(--green)}.tag.down{background:var(--orange-s);color:var(--orange)}.tag.off{background:var(--soft2);color:var(--sub)}
+.row{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:12px}
+.chk{display:inline-flex;align-items:center;gap:6px;font-size:14px;min-height:40px;cursor:pointer}
+input[type=range]{width:100%;accent-color:var(--blue);height:44px;margin:0}
+.bar{height:20px;border-radius:4px;background:var(--soft2);position:relative;overflow:hidden}
+.bar>span{position:absolute;left:0;top:0;bottom:0;border-radius:4px;transition:width .15s}
+.bar>i{position:absolute;top:0;bottom:0;width:2px;background:var(--red)}
+.kv{display:flex;justify-content:space-between;align-items:baseline;font-size:14px;margin:10px 0 4px}
+.mono{font-family:Menlo,Consolas,monospace;font-size:13px}
+.formula{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:8px 12px;margin-top:12px;font-size:14px}
+.matrix{display:grid;grid-template-columns:repeat(6,1fr);gap:4px;max-width:340px}
+.node{aspect-ratio:1;border-radius:4px;background:var(--soft2);border:1px solid var(--border);cursor:pointer;position:relative;transition:background .12s;padding:0}
+.node.tx{box-shadow:inset 0 0 0 2px var(--blue)}
+.node.hit{background:var(--orange-s)}
+.node.finger::after{content:"";position:absolute;inset:26%;border-radius:50%;background:var(--text);opacity:.85}
+.node.ghost::after{content:"";position:absolute;inset:26%;border-radius:50%;border:2px dashed var(--red)}
+.legend{display:flex;gap:12px;flex-wrap:wrap;font-size:13px;color:var(--sub);margin-top:20px}
+.legend i{display:inline-block;width:12px;height:12px;border-radius:3px;vertical-align:-2px;margin-right:4px;border:1px solid var(--border)}
+.btn{border:1px solid var(--border);background:var(--bg);color:var(--text);padding:8px 14px;border-radius:8px;font:inherit;font-size:14px;cursor:pointer;min-height:40px}
+.btn.primary{background:var(--blue);border-color:var(--blue);color:#fff}
+.profile{display:flex;gap:4px;align-items:flex-end;height:36px}
+.profile b{flex:1;background:var(--blue);border-radius:3px 3px 0 0;min-height:3px;opacity:.9}
+.profile.v{flex-direction:column;align-items:flex-start;height:auto;width:44px}
+.profile.v b{width:100%;height:auto;flex:none;border-radius:0 3px 3px 0}
+.mtx{display:grid;grid-template-columns:44px 1fr;gap:6px;max-width:400px}
+.status{margin-top:10px;font-size:14px}
+@media (prefers-reduced-motion: reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <h1>電容式觸控互動教材：自容 (Self-cap) vs 互容 (Mutual-cap)</h1>
+  <div class="tabs" role="tablist">
+    <button class="tab" role="tab" aria-selected="true" data-tab="p1">① 等效電路</button>
+    <button class="tab" role="tab" aria-selected="false" data-tab="p2">② 手指靠近 Cp / Cm</button>
+    <button class="tab" role="tab" aria-selected="false" data-tab="p3">③ Tx/Rx 矩陣掃描</button>
+  </div>
+</header>
+
+<!-- ① 等效電路 -->
+<section class="panel active" id="p1" role="tabpanel">
+  <div class="row">
+    <div class="seg" id="modeSeg">
+      <button aria-pressed="true" data-mode="self">自容 Self-capacitance</button>
+      <button aria-pressed="false" data-mode="mutual">互容 Mutual-capacitance</button>
+    </div>
+    <label class="chk"><input type="checkbox" id="fingerChk" checked> 顯示手指</label>
+  </div>
+  <div class="grid">
+    <div class="card">
+      <h2 id="c1Title">自容：量測電極對地電容 C<sub>P</sub></h2>
+      <svg id="svgSelf" viewBox="0 0 420 230" aria-label="自容等效電路">
+        <defs><marker id="arr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="var(--blue)"/></marker></defs>
+        <g fill="none" stroke="var(--wire)" stroke-width="1.6">
+          <rect x="18" y="108" width="96" height="40" rx="6"/>
+          <path d="M114 128 H190"/>
+          <path d="M246 148 V166 M226 166 H266 M226 176 H266 M246 176 V194 M232 194 H260 M238 200 H254 M244 206 H248"/>
+        </g>
+        <rect x="190" y="122" width="112" height="12" rx="2" fill="var(--blue)"/>
+        <text x="66" y="124" text-anchor="middle" font-size="11" fill="var(--text)">感測電路</text>
+        <text x="66" y="139" text-anchor="middle" font-size="10" fill="var(--sub)">CapSense AFE</text>
+        <text x="152" y="118" text-anchor="middle" font-size="11" fill="var(--text)">Sensor pad</text>
+        <text x="276" y="175" font-size="12" fill="var(--text)">C<tspan font-size="9" dy="3">P</tspan><tspan dy="-3" font-size="10" fill="var(--sub)">（寄生，對 GND）</tspan></text>
+        <text x="246" y="224" text-anchor="middle" font-size="10" fill="var(--sub)">GND</text>
+        <g id="selfFinger">
+          <ellipse cx="246" cy="54" rx="24" ry="34" fill="var(--orange-s)" stroke="var(--orange)" stroke-width="1.6"/>
+          <text x="246" y="58" text-anchor="middle" font-size="11" fill="var(--orange)">手指</text>
+          <g fill="none" stroke="var(--orange)" stroke-width="1.6" stroke-dasharray="4 3">
+            <path d="M246 88 V98 M232 98 H260 M232 108 H260 M246 108 V122"/>
+            <path d="M270 54 H360 V194 H346"/>
+          </g>
+          <text x="268" y="100" font-size="12" fill="var(--orange)">C<tspan font-size="9" dy="3">F</tspan></text>
+          <text x="364" y="124" font-size="10" fill="var(--sub)">人體</text>
+          <text x="364" y="136" font-size="10" fill="var(--sub)">→ GND</text>
+          <text x="18" y="40" font-size="12" fill="var(--green)" font-weight="600">C = C<tspan font-size="9" dy="3">P</tspan><tspan dy="-3"> + C</tspan><tspan font-size="9" dy="3">F</tspan><tspan dy="-3">  ↑ 變大</tspan></text>
+        </g>
+      </svg>
+      <svg id="svgMutual" viewBox="0 0 420 230" aria-label="互容等效電路">
+        <g fill="none" stroke="var(--wire)" stroke-width="1.6">
+          <rect x="14" y="122" width="78" height="40" rx="6"/>
+          <path d="M28 150 h10 v-14 h10 v14 h10 v-14 h10 v14 h10"/>
+          <path d="M92 142 H130"/>
+          <rect x="328" y="122" width="78" height="40" rx="6"/>
+          <path d="M290 142 H328"/>
+        </g>
+        <rect x="130" y="136" width="70" height="12" rx="2" fill="var(--blue)"/>
+        <rect x="220" y="136" width="70" height="12" rx="2" fill="var(--green)"/>
+        <text x="53" y="116" text-anchor="middle" font-size="11" fill="var(--text)">Tx 驅動（脈波）</text>
+        <text x="367" y="116" text-anchor="middle" font-size="11" fill="var(--text)">Rx 電荷量測</text>
+        <text x="367" y="146" text-anchor="middle" font-size="10" fill="var(--sub)">積分 / ADC</text>
+        <text x="165" y="166" text-anchor="middle" font-size="11" fill="var(--text)">Tx 電極</text>
+        <text x="255" y="166" text-anchor="middle" font-size="11" fill="var(--text)">Rx 電極</text>
+        <g fill="none" stroke="var(--blue)" stroke-width="1.4" opacity=".9">
+          <path d="M190 136 Q210 112 230 136"/>
+          <path d="M180 136 Q210 96 240 136"/>
+          <path id="fl3" d="M170 136 Q210 78 250 136"/>
+          <path id="fl4" d="M160 136 Q210 60 260 136"/>
+        </g>
+        <text x="210" y="196" text-anchor="middle" font-size="12" fill="var(--text)">C<tspan font-size="9" dy="3">M</tspan><tspan dy="-3" font-size="10" fill="var(--sub)">：Tx–Rx 之間的耦合電容（交叉點 = Sensor node）</tspan></text>
+        <g id="mutFinger">
+          <ellipse cx="210" cy="42" rx="26" ry="30" fill="var(--orange-s)" stroke="var(--orange)" stroke-width="1.6"/>
+          <text x="210" y="46" text-anchor="middle" font-size="11" fill="var(--orange)">手指</text>
+          <g fill="none" stroke="var(--orange)" stroke-width="1.4" stroke-dasharray="4 3">
+            <path d="M170 136 Q186 90 196 70"/>
+            <path d="M160 136 Q172 84 188 68"/>
+            <path d="M236 42 H360 V96"/>
+          </g>
+          <rect x="196" y="62" width="28" height="24" fill="var(--soft)" opacity=".01"/>
+          <text x="364" y="70" font-size="10" fill="var(--sub)">人體</text>
+          <text x="364" y="82" font-size="10" fill="var(--sub)">→ GND</text>
+          <text x="14" y="40" font-size="12" fill="var(--orange)" font-weight="600">C<tspan font-size="9" dy="3">M</tspan><tspan dy="-3"> ↓ 變小</tspan></text>
+          <text x="14" y="58" font-size="10" fill="var(--sub)">部分電場被手指分走</text>
+        </g>
+      </svg>
+      <p class="muted" id="c1Note">手指與人體等效為一條「到 GND 的低阻抗路徑」，並聯出額外電容 C<sub>F</sub>；感測電路讀到的總電容因而<b>增加</b>。</p>
+    </div>
+    <div class="card" id="c1Desc"></div>
+  </div>
+</section>
+
+<!-- ② 手指靠近 -->
+<section class="panel" id="p2" role="tabpanel">
+  <div class="grid">
+    <div class="card">
+      <h2>拖曳滑桿：手指到覆蓋層 (Overlay) 的距離 d</h2>
+      <input type="range" id="dist" min="0" max="20" step="0.5" value="12" aria-label="手指距離">
+      <div class="kv"><span>d = <b id="dVal" class="mono">12.0 mm</b></span><label class="chk"><input type="checkbox" id="glove"> 戴手套（+2 mm 絕緣）</label></div>
+      <svg viewBox="0 0 420 150" aria-label="手指接近示意">
+        <rect x="40" y="118" width="340" height="10" fill="var(--soft2)" stroke="var(--border)"/>
+        <text x="40" y="112" font-size="10" fill="var(--sub)">Overlay（覆蓋層）</text>
+        <rect x="150" y="130" width="120" height="10" rx="2" fill="var(--blue)"/>
+        <text x="210" y="149" text-anchor="middle" font-size="10" fill="var(--sub)">電極 (Sensor)</text>
+        <g id="fieldLines" fill="none" stroke="var(--blue)" stroke-width="1.2" opacity=".55"></g>
+        <g id="fingerG">
+          <ellipse id="fingerE" cx="210" cy="60" rx="30" ry="22" fill="var(--orange-s)" stroke="var(--orange)" stroke-width="1.6"/>
+          <text id="fingerT" x="210" y="64" text-anchor="middle" font-size="11" fill="var(--orange)">手指</text>
+        </g>
+      </svg>
+      <div class="formula">
+        <div class="mono">C = ε₀·εᵣ·A / d　→　d 越小，C<sub>F</sub> 越大（非線性，靠近時陡增）</div>
+        <div class="muted">自容：C<sub>total</sub> = C<sub>P</sub> + C<sub>F</sub>（+ΔC）　互容：C<sub>M</sub>′ = C<sub>M</sub> − α·C<sub>F</sub>（−ΔC，α 為被分走的電場比例）</div>
+      </div>
+    </div>
+    <div class="card">
+      <h2>兩種架構同時看：ΔC 與觸發門檻</h2>
+      <div class="kv"><span>自容 C<sub>total</sub>（基準 C<sub>P</sub> = 10 pF）</span><span id="selfTag" class="tag off">未觸發</span></div>
+      <div class="bar"><span id="selfBar" style="background:var(--green);width:50%"></span><i id="selfTh"></i></div>
+      <div class="muted"><span class="mono" id="selfVal"></span></div>
+      <div class="kv"><span>互容 C<sub>M</sub>（基準 C<sub>M</sub> = 2.0 pF）</span><span id="mutTag" class="tag off">未觸發</span></div>
+      <div class="bar"><span id="mutBar" style="background:var(--orange);width:50%"></span><i id="mutTh"></i></div>
+      <div class="muted"><span class="mono" id="mutVal"></span></div>
+      <ul id="obs">
+        <li>紅線 = 觸發門檻（自容 ΔC ≥ +0.6 pF；互容 ΔC ≤ −0.3 pF）。</li>
+        <li>自容的 ΔC 較大，手指離開表面數 mm 就能觸發 → 適合近接、隔空、手套。</li>
+        <li>互容只能量到「被分走」的那一部分電場，ΔC 小 → 通常需真正接觸。</li>
+      </ul>
+      <p class="muted">數值為概念示意模型，非實際元件參數。</p>
+    </div>
+  </div>
+</section>
+
+<!-- ③ Tx/Rx 矩陣 -->
+<section class="panel" id="p3" role="tabpanel">
+  <div class="row">
+    <div class="seg" id="scanSeg">
+      <button aria-pressed="true" data-scan="mutual">互容掃描（逐點 Node）</button>
+      <button aria-pressed="false" data-scan="self">自容掃描（Row / Col）</button>
+    </div>
+    <button class="btn primary" id="scanBtn">▶ 開始掃描</button>
+    <button class="btn" id="clearBtn">清除手指</button>
+    <span class="muted">點擊格子放置 / 移除手指（最多 3 根）</span>
+  </div>
+  <div class="grid">
+    <div class="card">
+      <h2 id="mTitle">6 × 6 感測矩陣：Tx (Row) × Rx (Col) = 36 個 Sensor node</h2>
+      <div class="mtx">
+        <div class="profile v" id="rowProf" aria-hidden="true"></div>
+        <div class="matrix" id="matrix" role="grid"></div>
+        <div></div>
+        <div class="profile" id="colProf" aria-hidden="true"></div>
+      </div>
+      <div class="legend"><span><i style="box-shadow:inset 0 0 0 2px var(--blue)"></i>目前驅動的 Tx / 掃描電極</span><span><i style="background:var(--orange-s)"></i>偵���到 ΔC</span><span><i style="background:var(--text);border-radius:50%"></i>真實手指</span><span><i style="border:2px dashed var(--red);border-radius:50%"></i>鬼點 Ghost</span></div>
+    </div>
+    <div class="card">
+      <h2>掃描流程與結果</h2>
+      <div id="scanLog" class="mono muted" style="min-height:44px">尚未開始。</div>
+      <div class="status" id="scanStatus"></div>
+      <ul id="scanNotes"></ul>
+    </div>
+  </div>
+</section>
+</div>
+
+<script>
+(function(){
+  // ---- Tabs
+  const tabs=[...document.querySelectorAll('.tab')];
+  tabs.forEach(t=>t.addEventListener('click',()=>{
+    tabs.forEach(x=>x.setAttribute('aria-selected',x===t));
+    document.querySelectorAll('.panel').forEach(p=>p.classList.toggle('active',p.id===t.dataset.tab));
+    if(t.dataset.tab==='p3'&&window.renderMatrix)window.renderMatrix();
+  }));
+  if(location.hash&&document.querySelector('.tab[data-tab="'+location.hash.slice(1)+'"]'))document.querySelector('.tab[data-tab="'+location.hash.slice(1)+'"]').click();
+
+  // ---- ① Circuit
+  const desc={
+    self:{title:'自容：量測電極對地電容 C<sub>P</sub>',note:'手指與人體等效為一條「到 GND 的低阻抗路徑」，並聯出額外電容 C<sub>F</sub>；感測電路讀到的總電容因而<b>增加</b>。',
+      html:`<h2>自容 Self-capacitance <span class="tag up">觸碰時 C ↑</span></h2>
+      <p class="muted">每個電極獨立量測，結果為一個標量（1-D）。</p>
+      <b>優點</b><ul><li>ΔC 大、靈敏度高，可做近接 (proximity)、隔空、戴手套偵測</li><li>電路簡單、掃描步數少、功耗低</li><li>電極形狀自由：按鍵、滑桿、滾輪</li></ul>
+      <b>缺點</b><ul><li>矩陣排列時只知道 Row/Col 哪幾條有反應 → 多指會出現鬼點 (ghost)</li><li>接地水滴會被當成手指；需 shield / 防水演算法</li></ul>
+      <b>適用</b><ul><li>觸控按鍵、家電面板、近接喚醒、單指大面積感測</li></ul>`},
+    mutual:{title:'互容：量測 Tx–Rx 之間的耦合電容 C<sub>M</sub>',note:'Tx 送出脈波，Rx 接收經 C<sub>M</sub> 轉移的電荷 (charge transfer)。手指靠近時，部分電場改流向人體，Rx 收到的電荷<b>減少</b>。',
+      html:`<h2>互容 Mutual-capacitance <span class="tag down">觸碰時 C<sub>M</sub> ↓</span></h2>
+      <p class="muted">每個 Tx/Rx 交叉點 (node) 各自獨立量測，結果為 2-D 影像。</p>
+      <b>優點</b><ul><li>真多點觸控：每個 node 獨立，無鬼點</li><li>空間解析度高，可做手勢、手寫</li><li>對接地水滴較不敏感（水滴讓 C<sub>M</sub> 反而略增）</li></ul>
+      <b>缺點</b><ul><li>ΔC 小、靈敏度低，隔空 / 厚手套較難</li><li>需要 Tx 驅動電路，逐條 Tx 掃描 → 時間與功耗較高</li><li>雜訊耦合（顯示器、充電器）需更多濾波</li></ul>
+      <b>適用</b><ul><li>手機/平板觸控面板、觸控板、多指手勢介面</li></ul>`}
+  };
+  const modeSeg=document.getElementById('modeSeg'),fingerChk=document.getElementById('fingerChk');
+  let mode='self';
+  function renderCircuit(){
+    modeSeg.querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.mode===mode));
+    document.getElementById('svgSelf').style.display=mode==='self'?'':'none';
+    document.getElementById('svgMutual').style.display=mode==='mutual'?'':'none';
+    document.getElementById('c1Title').innerHTML=desc[mode].title;
+    document.getElementById('c1Note').innerHTML=desc[mode].note;
+    document.getElementById('c1Desc').innerHTML=desc[mode].html;
+    const f=fingerChk.checked;
+    document.getElementById('selfFinger').style.display=f?'':'none';
+    document.getElementById('mutFinger').style.display=f?'':'none';
+    // when finger present in mutual mode, outer field lines are "stolen": hide them
+    ['fl3','fl4'].forEach(id=>document.getElementById(id).style.display=(f&&mode==='mutual')?'none':'');
+  }
+  modeSeg.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;mode=b.dataset.mode;renderCircuit();});
+  fingerChk.addEventListener('change',renderCircuit);
+  renderCircuit();
+
+  // ---- ② Finger approach
+  const dist=document.getElementById('dist'),glove=document.getElementById('glove');
+  const CP=10,CM0=2.0,ALPHA=0.35,TH_SELF=0.6,TH_MUT=0.3;
+  const SELF_MAX=14,MUT_MAX=2.4; // bar scales
+  function cf(d){return 3.2/(1+d/1.5);} // pF, saturates ~3.2 pF at contact
+  document.getElementById('selfTh').style.left=((CP+TH_SELF)/SELF_MAX*100)+'%';
+  document.getElementById('mutTh').style.left=((CM0-TH_MUT)/MUT_MAX*100)+'%';
+  function renderApproach(){
+    const dUser=+dist.value, d=dUser+(glove.checked?2:0);
+    document.getElementById('dVal').textContent=dUser.toFixed(1)+' mm'+(glove.checked?' (+2)':'');
+    const CF=cf(d), cs=CP+CF, cm=CM0-ALPHA*CF;
+    const dS=CF, dM=-(ALPHA*CF);
+    document.getElementById('selfBar').style.width=(cs/SELF_MAX*100)+'%';
+    document.getElementById('mutBar').style.width=(cm/MUT_MAX*100)+'%';
+    document.getElementById('selfVal').textContent=`C_total = ${cs.toFixed(2)} pF　ΔC = +${dS.toFixed(2)} pF`;
+    document.getElementById('mutVal').textContent=`C_M = ${cm.toFixed(2)} pF　ΔC = ${dM.toFixed(2)} pF`;
+    const st=document.getElementById('selfTag'),mt=document.getElementById('mutTag');
+    const sOn=dS>=TH_SELF,mOn=-dM>=TH_MUT;
+    st.textContent=sOn?'觸發 ✓':'未觸發';st.className='tag '+(sOn?'up':'off');
+    mt.textContent=mOn?'觸發 ✓':'未觸發';mt.className='tag '+(mOn?'down':'off');
+    // finger position: y from 20 (far) to 96 (touch)
+    const cy=96-(dUser/20)*76;
+    const fe=document.getElementById('fingerE'),ft=document.getElementById('fingerT');
+    fe.setAttribute('cy',cy);ft.setAttribute('y',cy+4);
+    // field lines: number of lines reaching finger grows as d shrinks
+    const g=document.getElementById('fieldLines');let s='';
+    const n=6,reach=Math.max(0,Math.min(n,Math.round((1-d/14)*n)));
+    for(let i=0;i<n;i++){const x=160+i*20;const toF=i<reach; const ex= toF? 210+(i-2.5)*10 : x; const ey= toF? cy+22 : Math.max(cy+30,60);
+      s+=`<path d="M${x} 130 Q${x} ${ey+ (toF?10:0)} ${ex} ${ey}" ${toF?'stroke="var(--orange)" opacity=".9"':''}/>`;}
+    g.innerHTML=s;
+  }
+  dist.addEventListener('input',renderApproach);glove.addEventListener('change',renderApproach);renderApproach();
+
+  // ---- ③ Matrix scan
+  const N=6,matrix=document.getElementById('matrix');
+  let fingers=new Set(),scan='mutual',timer=null,step=-1,hits=new Set();
+  const nodes=[];
+  for(let r=0;r<N;r++)for(let c=0;c<N;c++){const b=document.createElement('button');b.className='node';b.setAttribute('role','gridcell');b.setAttribute('aria-label',`Tx${r} / Rx${c}`);b.dataset.r=r;b.dataset.c=c;
+    b.addEventListener('click',()=>{const k=r+','+c;if(fingers.has(k))fingers.delete(k);else if(fingers.size<3)fingers.add(k);stopScan();renderMatrix();});
+    matrix.appendChild(b);nodes.push(b);}
+  const rowProf=document.getElementById('rowProf'),colProf=document.getElementById('colProf');
+  rowProf.innerHTML=Array.from({length:N},()=>'<b></b>').join('');colProf.innerHTML=rowProf.innerHTML;
+  const scanSeg=document.getElementById('scanSeg'),scanBtn=document.getElementById('scanBtn');
+  scanSeg.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;scan=b.dataset.scan;scanSeg.querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed',x===b));stopScan();renderMatrix();});
+  document.getElementById('clearBtn').addEventListener('click',()=>{fingers.clear();stopScan();renderMatrix();});
+  scanBtn.addEventListener('click',()=>{if(timer)stopScan();else startScan();});
+  function startScan(){step=-1;hits.clear();scanBtn.textContent='■ 停止';tick();timer=setInterval(tick,420);}
+  function stopScan(){clearInterval(timer);timer=null;step=-1;scanBtn.textContent='▶ 開始掃描';}
+  function tick(){step++;const total=scan==='mutual'?N:2*N;if(step>=total){stopScan();renderMatrix(true);return;}
+    if(scan==='mutual'){for(let c=0;c<N;c++)if(fingers.has(step+','+c))hits.add(step+','+c);}
+    else{ if(step<N){ if([...fingers].some(k=>+k.split(',')[0]===step))hits.add('r'+step);} else {const c=step-N; if([...fingers].some(k=>+k.split(',')[1]===c))hits.add('c'+c);} }
+    renderMatrix();}
+  function renderMatrix(done){
+    const rowsF=new Set([...fingers].map(k=>+k.split(',')[0])),colsF=new Set([...fingers].map(k=>+k.split(',')[1]));
+    const rowsH=new Set([...hits].filter(k=>k[0]==='r').map(k=>+k.slice(1))),colsH=new Set([...hits].filter(k=>k[0]==='c').map(k=>+k.slice(1)));
+    nodes.forEach(b=>{const r=+b.dataset.r,c=+b.dataset.c,k=r+','+c;b.className='node';
+      if(fingers.has(k))b.classList.add('finger');
+      if(scan==='mutual'){ if(timer&&step===r)b.classList.add('tx'); if(hits.has(k))b.classList.add('hit'); }
+      else { if(timer&&((step<N&&step===r)||(step>=N&&step-N===c)))b.classList.add('tx');
+             const cand=rowsH.has(r)&&colsH.has(c); if(cand){b.classList.add('hit'); if(!fingers.has(k))b.classList.add('ghost');} }
+    });
+    const showProf=scan==='self';rowProf.style.visibility=colProf.style.visibility=showProf?'visible':'hidden';
+    [...rowProf.children].forEach((b,i)=>{b.style.height='100%';b.style.width=(rowsH.has(i)?100:12)+'%';b.style.flex='1';});
+    rowProf.style.display='grid';rowProf.style.gridTemplateRows=`repeat(${N},1fr)`;rowProf.style.gap='4px';rowProf.style.height=matrix.offsetHeight+'px';
+    [...colProf.children].forEach((b,i)=>{b.style.height=(colsH.has(i)?100:12)+'%';});
+    // log
+    const log=document.getElementById('scanLog'),stt=document.getElementById('scanStatus'),nt=document.getElementById('scanNotes');
+    if(timer){ log.textContent= scan==='mutual'? `Step ${step+1}/${N}: 驅動 Tx${step}，同時讀取 Rx0–Rx${N-1} 的電荷 → 得到該列 ${N} 個 node 的 ΔC` : (step<N?`Step ${step+1}/${2*N}: 量測 Row${step} 電極對地電容`:`Step ${step+1}/${2*N}: 量測 Col${step-N} 電極對地電容`); }
+    else if(done){ log.textContent= scan==='mutual'? `完成：${N} 步掃完 ${N*N} 個 node（每步平行讀 ${N} 條 Rx）` : `完成：${2*N} 步得到 ${N} 個 Row + ${N} 個 Col 的 1-D 剖面 (profile)`; }
+    else if(fingers.size===0){ log.textContent='先在矩陣上點擊放置手指，再按「開始掃描」。'; }
+    else { log.textContent='已放置 '+fingers.size+' 根手指，按「開始掃描」。'; }
+    if(done){ if(scan==='mutual'){ stt.innerHTML=`偵測到 <b>${hits.size}</b> 個 node，與真實手指數 ${fingers.size} 一致。`;
+        nt.innerHTML='<li>每個交叉點的 C<sub>M</sub> 各自獨立，多指位置可直接由 2-D 影像讀出。</li><li>代價：Tx 需逐條驅動，掃描時間 ∝ Tx 數量。</li>'; }
+      else { let cand=0;rowsH.forEach(r=>colsH.forEach(c=>cand++)); const ghost=cand-fingers.size;
+        stt.innerHTML=`Row/Col 交叉出 <b>${cand}</b> 個候選點，其中 <b style="color:var(--red)">${Math.max(0,ghost)}</b> 個為鬼點 (ghost)。`;
+        nt.innerHTML= (ghost>0? '<li>只知道「哪幾條 Row、哪幾條 Col」有反應，無法判斷配對 → 出現鬼點。</li>' : '<li>單指（或同 Row/Col）時不會有鬼點；試著放兩根對角線上的手指。</li>')+'<li>步數少（Row+Col），且每條電極面積大 → ΔC 大、可近接偵測。</li>'; } }
+    else { stt.textContent=''; nt.innerHTML=''; }
+  }
+  window.renderMatrix=renderMatrix;
+  renderMatrix();
+  window.addEventListener('resize',()=>renderMatrix());
+  if(location.hash==='#p3'){renderMatrix();}
+})();
+</script>
+</body>
+</html>
