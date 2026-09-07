@@ -211,7 +211,7 @@ input[type=range]{width:100%;accent-color:var(--blue);height:44px;margin:0}
         <div></div>
         <div class="profile" id="colProf" aria-hidden="true"></div>
       </div>
-      <div class="legend"><span><i style="box-shadow:inset 0 0 0 2px var(--blue)"></i>目前驅動的 Tx / 掃描電極</span><span><i style="background:var(--orange-s)"></i>偵���到 ΔC</span><span><i style="background:var(--text);border-radius:50%"></i>真實手指</span><span><i style="border:2px dashed var(--red);border-radius:50%"></i>鬼點 Ghost</span></div>
+      <div class="legend"><span><i style="box-shadow:inset 0 0 0 2px var(--blue)"></i>目前驅動的 Tx / 掃描電極</span><span><i style="background:var(--orange-s)"></i>偵測到 ΔC</span><span><i style="background:var(--text);border-radius:50%"></i>真實手指</span><span><i style="border:2px dashed var(--red);border-radius:50%"></i>鬼點 Ghost</span></div>
     </div>
     <div class="card">
       <h2>掃描流程與結果</h2>
@@ -314,7 +314,7 @@ input[type=range]{width:100%;accent-color:var(--blue);height:44px;margin:0}
   scanSeg.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;scan=b.dataset.scan;scanSeg.querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed',x===b));stopScan();renderMatrix();});
   document.getElementById('clearBtn').addEventListener('click',()=>{fingers.clear();stopScan();renderMatrix();});
   scanBtn.addEventListener('click',()=>{if(timer)stopScan();else startScan();});
-  function startScan(){step=-1;hits.clear();scanBtn.textContent='■ 停止';tick();timer=setInterval(tick,420);}
+  function startScan(){step=-1;hits.clear();scanBtn.textContent='■ 停止';timer=setInterval(tick,420);tick();}
   function stopScan(){clearInterval(timer);timer=null;step=-1;scanBtn.textContent='▶ 開始掃描';}
   function tick(){step++;const total=scan==='mutual'?N:2*N;if(step>=total){stopScan();renderMatrix(true);return;}
     if(scan==='mutual'){for(let c=0;c<N;c++)if(fingers.has(step+','+c))hits.add(step+','+c);}
